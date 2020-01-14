@@ -43,11 +43,12 @@ async function submitResults(results) {
   return ;
 }
 
-async function fetch(url, body = null) {
+// Adding the counter here as the submitResults API seems to throw a auth error as Internal Server error which might not recover
+async function fetch(url, body=null, i=0) {
   try {
     if (body) {
       const res = await nodefetch(url, { method: "POST", body: body });
-      console.log(typeof res.status);
+
       if (res.ok) { // res.status >= 200 && res.status < 300
         return await res.json();
       } else if (res.status != 500) {
@@ -57,6 +58,7 @@ async function fetch(url, body = null) {
       }
     } else {
       const res = await nodefetch(url);
+
       if (res.ok) { // res.status >= 200 && res.status < 300
         return await res.json();
       } else if (res.status != 500) {
@@ -69,9 +71,14 @@ async function fetch(url, body = null) {
     // Note: Need to add any known or expected API error messages here. Assuming the API unreliability is only a server issue and would recover eventually.
     // TODO: It might be better to add a counter instead of hitting an unreliable API continuously
 
-    console.log("Request: ", url, ", Error:", err);
-    await new Promise(resolve => setTimeout(resolve, 600)); // adding the timeout to avoid hitting the API continuously and give time to recover
-    return await fetch(url, body);
+    console.log(i, "Request: ", url, ", Error:", err);
+    if (i <= 5) {
+      await new Promise(resolve => setTimeout(resolve, 600)); // adding the timeout to avoid hitting the API continuously and give time to recover
+      i++;
+      return await fetch(url, body, i);
+    } else {
+      throw Error(err);
+    }
   }
 }
 
